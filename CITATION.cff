@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use plasmopack, please cite it using these metadata."
+title: "plasmopack: an AnnData-native toolkit for Plasmodium and VEuPathDB organism bioinformatics"
+authors:
+  - family-names: Jamakhani
+    given-names: Majeed
+    email: mjbioinfo@gmail.com
+version: 0.1.0.dev0
+date-released: 2026-06-23
+license: MIT
+repository-code: "https://github.com/majeedmj/plasmopack"
+keywords:
+  - bioinformatics
+  - plasmodium
+  - malaria
+  - veupathdb
+  - single-cell
+  - anndata

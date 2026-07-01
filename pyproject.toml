@@ -1,0 +1,136 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "plasmopack"
+version = "0.1.0.dev0"
+description = "AnnData-native toolkit for Plasmodium and VEuPathDB organism bioinformatics"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+    { name = "Majeed Jamakhani", email = "mjbioinfo@gmail.com" },
+]
+keywords = [
+    "bioinformatics",
+    "plasmodium",
+    "malaria",
+    "veupathdb",
+    "single-cell",
+    "anndata",
+    "genomics",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Operating System :: OS Independent",
+]
+
+# Core dependencies ONLY. Everything else is an optional extra.
+# This is the "minimum dependencies" contract — see publish/decisions.
+dependencies = [
+    "anndata>=0.10",
+    "numpy>=1.24",
+    "pandas>=2.0",
+    "scipy>=1.11",
+]
+
+[project.optional-dependencies]
+deg = ["pydeseq2>=0.4"]
+enrich = ["gseapy>=1.1"]
+comp = ["sccoda>=0.1.9"]
+ml = ["scikit-learn>=1.3"]
+sc = ["scanpy>=1.10"]
+all = [
+    "pydeseq2>=0.4",
+    "gseapy>=1.1",
+    "sccoda>=0.1.9",
+    "scikit-learn>=1.3",
+    "scanpy>=1.10",
+]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "vcrpy>=6.0",
+    "hypothesis>=6.100",
+    "ruff>=0.6",
+    "mypy>=1.11",
+    "pandas-stubs",
+]
+docs = [
+    "mkdocs-material>=9.5",
+    "mkdocstrings[python]>=0.26",
+    "mkdocs-jupyter>=0.25",
+]
+
+[project.urls]
+Homepage = "https://github.com/majeedmj/plasmopack"
+Documentation = "https://majeedmj.github.io/plasmopack"
+Repository = "https://github.com/majeedmj/plasmopack"
+Issues = "https://github.com/majeedmj/plasmopack/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/plasmopack"]
+
+# ---------------------------------------------------------------------------
+# Ruff — linting + formatting
+# ---------------------------------------------------------------------------
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "C4",  # flake8-comprehensions
+    "SIM", # flake8-simplify
+]
+ignore = [
+    "E501",  # line length handled by formatter
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["plasmopack"]
+
+# ---------------------------------------------------------------------------
+# Mypy — strict typing at boundaries (adapters/, io/)
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+
+# Strict only on the boundary layers; relax elsewhere for now.
+[[tool.mypy.overrides]]
+module = [
+    "plasmopack.adapters.*",
+    "plasmopack.io.*",
+    "plasmopack._utils.*",
+]
+strict = true
+
+# ---------------------------------------------------------------------------
+# Pytest
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra --strict-markers"
+markers = [
+    "network: tests that hit live APIs (run only in nightly CI, not by default)",
+]

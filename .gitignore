@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+*.so
+
+# Environments
+.pixi/
+.venv/
+venv/
+env/
+
+# Testing / coverage
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.hypothesis/
+.mypy_cache/
+.ruff_cache/
+
+# Docs
+site/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# On-disk cache created by plasmopy at runtime
+.plasmopy_cache/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Local Claude Code settings (personal, not shared)
+.claude/settings.local.json
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Keep large real datasets out of git; only small fixtures live in tests/data
+*.h5ad
+!tests/data/*.h5ad
