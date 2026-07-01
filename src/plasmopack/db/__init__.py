@@ -7,10 +7,11 @@ UniProt, Ensembl, NCBI, OrthoMCL, STRING, and more. See Phase 3 in
 Currently available
 -------------------
 - :mod:`plasmopack.db.uniprot` — UniProtKB protein records
+- :mod:`plasmopack.db.ensembl` — Ensembl gene lookup (Plasmodium + more)
 """
 
 from __future__ import annotations
 
-from plasmopack.db import uniprot
+from plasmopack.db import ensembl, uniprot
 
-__all__ = ["uniprot"]
+__all__ = ["ensembl", "uniprot"]

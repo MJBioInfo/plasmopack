@@ -1,0 +1,17 @@
+{
+  "id": "PF3D7_0206800",
+  "object_type": "Gene",
+  "display_name": "MSP2",
+  "description": "Merozoite surface antigen 2 [Source:UniProtKB/Swiss-Prot;Acc:P50498]",
+  "biotype": "protein_coding",
+  "species": "plasmodium_falciparum",
+  "seq_region_name": "Pf3D7_02_v3",
+  "start": 271576,
+  "end": 274917,
+  "strand": -1,
+  "source": "VectorBase",
+  "logic_name": "brc4_import",
+  "canonical_transcript": "PF3D7_0206800.1.",
+  "db_type": "core",
+  "assembly_name": "GCA000002765v3"
+}
