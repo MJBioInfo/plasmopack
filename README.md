@@ -1,5 +1,10 @@
 # plasmopack
 
+[![CI](https://github.com/MJBioInfo/plasmopack/actions/workflows/ci.yml/badge.svg)](https://github.com/MJBioInfo/plasmopack/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue)](https://www.python.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
+
 **AnnData-native toolkit for *Plasmodium* and VEuPathDB organism bioinformatics.**
 
 `plasmopack` brings the scanpy-style workflow (`pp`, `tl`, `pl`) to malaria and other
