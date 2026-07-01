@@ -70,10 +70,10 @@ docs = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/majeedmj/plasmopack"
-Documentation = "https://majeedmj.github.io/plasmopack"
-Repository = "https://github.com/majeedmj/plasmopack"
-Issues = "https://github.com/majeedmj/plasmopack/issues"
+Homepage = "https://github.com/MJBioInfo/plasmopack"
+Documentation = "https://MJBioInfo.github.io/plasmopack"
+Repository = "https://github.com/MJBioInfo/plasmopack"
+Issues = "https://github.com/MJBioInfo/plasmopack/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/plasmopack"]

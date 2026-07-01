@@ -8,7 +8,7 @@ authors:
 version: 0.1.0.dev0
 date-released: 2026-06-23
 license: MIT
-repository-code: "https://github.com/majeedmj/plasmopack"
+repository-code: "https://github.com/MJBioInfo/plasmopack"
 keywords:
   - bioinformatics
   - plasmodium

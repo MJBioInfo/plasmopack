@@ -1,8 +1,8 @@
 site_name: plasmopack
 site_description: AnnData-native toolkit for Plasmodium and VEuPathDB organism bioinformatics
-site_url: https://majeedmj.github.io/plasmopack
-repo_url: https://github.com/majeedmj/plasmopack
-repo_name: majeedmj/plasmopack
+site_url: https://MJBioInfo.github.io/plasmopack
+repo_url: https://github.com/MJBioInfo/plasmopack
+repo_name: MJBioInfo/plasmopack
 
 theme:
   name: material

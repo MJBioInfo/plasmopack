@@ -41,7 +41,7 @@ pip install "plasmopack[all]"         # with all optional features
 
 ## Documentation
 
-See [the documentation site](https://majeedmj.github.io/plasmopack) (coming soon).
+See [the documentation site](https://MJBioInfo.github.io/plasmopack) (coming soon).
 
 ## Citation
 
