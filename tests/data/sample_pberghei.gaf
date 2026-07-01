@@ -1,0 +1,11 @@
+!gaf-version: 2.1
+!generated-by: plasmopack test fixture (synthetic, not real annotations)
+!date-generated: 2026-06-23
+VEuPathDB	PBANKA_010010	gene1	 	GO:0006412	PMID:0000000	IEA	 	P	putative protein	 	gene	taxon:5823	20260101	VEuPathDB
+VEuPathDB	PBANKA_020020	gene2	 	GO:0006412	PMID:0000000	IEA	 	P	putative protein	 	gene	taxon:5823	20260101	VEuPathDB
+VEuPathDB	PBANKA_030030	gene3	 	GO:0006412	PMID:0000000	IDA	 	P	putative protein	 	gene	taxon:5823	20260101	VEuPathDB
+VEuPathDB	PBANKA_010010	gene1	 	GO:0003735	PMID:0000000	IEA	 	F	putative protein	 	gene	taxon:5823	20260101	VEuPathDB
+VEuPathDB	PBANKA_020020	gene2	 	GO:0003735	PMID:0000000	IEA	 	F	putative protein	 	gene	taxon:5823	20260101	VEuPathDB
+VEuPathDB	PBANKA_040040	gene4	 	GO:0005737	PMID:0000000	IEA	 	C	putative protein	 	gene	taxon:5823	20260101	VEuPathDB
+VEuPathDB	PBANKA_050050	gene5	NOT	GO:0006412	PMID:0000000	IEA	 	P	putative protein	 	gene	taxon:5823	20260101	VEuPathDB
+VEuPathDB	PBANKA_010010	gene1	 	GO:0006412	PMID:0000000	IEA	 	P	putative protein	 	gene	taxon:5823	20260101	VEuPathDB
