@@ -15,12 +15,13 @@ API reference: https://www.uniprot.org/help/api
 
 from __future__ import annotations
 
+import urllib.parse
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
 from plasmopack._utils.cache import DiskCache, make_key
-from plasmopack._utils.http import http_get_json
+from plasmopack._utils.http import HTTPError, http_get_json
 
 _BASE_URL = "https://rest.uniprot.org/uniprotkb"
 
@@ -164,7 +165,20 @@ def fetch_one(
             return parse_record(cached)
 
     url = f"{_BASE_URL}/{accession}.json"
-    data = transport(url)
+    try:
+        data = transport(url)
+    except HTTPError as exc:
+        # A 400 almost always means the caller passed something that is not a
+        # UniProt accession (e.g. a gene name like "AMA1"). Give a clear,
+        # actionable message instead of a raw HTTP error.
+        if exc.status == 400:
+            raise ValueError(
+                f"{accession!r} is not a valid UniProt accession "
+                f"(accessions look like 'Q8I3H7'). To look up by gene name or "
+                f"symbol, use search() instead, e.g. "
+                f"pp.db.uniprot.search({accession!r}, organism='pfalciparum')."
+            ) from exc
+        raise
     if cache is not None:
         cache.set(key, data)
     return parse_record(data)
@@ -178,3 +192,46 @@ def fetch(
 ) -> list[UniProtRecord]:
     """Fetch and parse several UniProt accessions, preserving input order."""
     return [fetch_one(acc, transport=transport, cache=cache) for acc in accessions]
+
+
+def search(
+    query: str,
+    *,
+    limit: int = 25,
+    transport: Transport | None = None,
+    cache: DiskCache | None = None,
+) -> list[UniProtRecord]:
+    """Run a UniProtKB search query and parse the results.
+
+    Parameters
+    ----------
+    query
+        A UniProt query string, e.g. ``"gene:AMA1 AND organism_id:36329"``.
+    limit
+        Maximum number of results to return.
+    transport
+        Injectable JSON transport (defaults to the stdlib HTTP getter).
+    cache
+        Optional cache; a hit avoids the network.
+
+    Returns
+    -------
+    list[UniProtRecord]
+        Parsed records (possibly empty if nothing matched).
+    """
+    if transport is None:
+        transport = http_get_json
+
+    key = make_key("uniprot_search", query, str(limit))
+    if cache is not None:
+        cached = cache.get(key)
+        if cached is not None:
+            return [parse_record(r) for r in cached]
+
+    params = urllib.parse.urlencode({"query": query, "format": "json", "size": limit})
+    url = f"{_BASE_URL}/search?{params}"
+    data = transport(url)
+    results = data.get("results", []) if isinstance(data, dict) else []
+    if cache is not None:
+        cache.set(key, results)
+    return [parse_record(r) for r in results]

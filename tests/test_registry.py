@@ -20,6 +20,14 @@ def test_lookup_by_key() -> None:
     assert org.taxonomy_id == 5823
 
 
+def test_strain_and_species_taxa_differ() -> None:
+    # Strain taxon matches the reference genome; species taxon is what UniProt
+    # indexes proteins under. They are deliberately different.
+    pf = get_organism("pfalciparum")
+    assert pf.taxonomy_id == 36329  # P. falciparum 3D7 (strain)
+    assert pf.species_taxonomy_id == 5833  # P. falciparum (species)
+
+
 @pytest.mark.parametrize("alias", ["pb", "PB", "berghei", "pbanka"])
 def test_lookup_by_alias(alias: str) -> None:
     assert get_organism(alias).key == "pberghei"

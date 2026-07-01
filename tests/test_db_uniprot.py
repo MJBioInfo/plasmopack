@@ -10,8 +10,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 import plasmopack as pp
 from plasmopack._utils.cache import DiskCache
+from plasmopack._utils.http import HTTPError
 from plasmopack.adapters import uniprot
 from plasmopack.adapters.uniprot import parse_record
 
@@ -91,6 +94,45 @@ def test_cache_avoids_second_network_call(tmp_path: Path) -> None:
 
     assert r1.accession == r2.accession == "Q8I3H7"
     assert calls["n"] == 1  # second call served from cache
+
+
+# -- friendly error on gene-name-as-accession ------------------------------
+def test_gene_name_as_accession_gives_helpful_error() -> None:
+    def transport_400(url: str) -> dict:
+        raise HTTPError("bad request", status=400)
+
+    with pytest.raises(ValueError, match="not a valid UniProt accession"):
+        uniprot.fetch_one("AMA1", transport=transport_400)
+
+
+# -- search -----------------------------------------------------------------
+def test_search_parses_results() -> None:
+    def transport(url: str) -> dict:
+        assert "search?" in url
+        return {"results": [_SAMPLE, {"primaryAccession": "X2"}]}
+
+    recs = uniprot.search("gene:SAMP1", transport=transport)
+    assert [r.accession for r in recs] == ["Q8I3H7", "X2"]
+
+
+def test_search_empty_results() -> None:
+    recs = uniprot.search("gene:NOPE", transport=lambda url: {"results": []})
+    assert recs == []
+
+
+def test_public_search_builds_organism_query(monkeypatch, tmp_path) -> None:
+    captured = {}
+
+    def fake_adapter_search(query, *, limit, cache):  # type: ignore[no-untyped-def]
+        captured["query"] = query
+        captured["limit"] = limit
+        return []
+
+    monkeypatch.setattr("plasmopack.db.uniprot._adapter.search", fake_adapter_search)
+    pp.db.uniprot.search("AMA1", organism="pfalciparum", limit=5)
+    # UniProt uses the species taxon (5833) with subtree-matching taxonomy_id
+    assert captured["query"] == "gene:AMA1 AND taxonomy_id:5833"
+    assert captured["limit"] == 5
 
 
 # -- public surface ---------------------------------------------------------

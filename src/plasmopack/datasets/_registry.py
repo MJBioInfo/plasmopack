@@ -36,7 +36,11 @@ class Organism:
     gene_id_regex
         Regex matching a full valid gene ID for this organism.
     taxonomy_id
-        NCBI taxonomy identifier.
+        NCBI taxonomy id of the *reference strain* — the genome the gene IDs
+        come from (e.g. 36329 = P. falciparum 3D7).
+    species_taxonomy_id
+        NCBI taxonomy id at the *species* level (e.g. 5833 = P. falciparum).
+        UniProt indexes proteins at this level, so protein searches use it.
     """
 
     key: str
@@ -47,6 +51,7 @@ class Organism:
     gene_id_prefix: str
     gene_id_regex: str
     taxonomy_id: int
+    species_taxonomy_id: int
     aliases: tuple[str, ...] = field(default_factory=tuple)
 
     def matches_gene_id(self, gene_id: str) -> bool:
@@ -68,6 +73,7 @@ _REGISTRY: dict[str, Organism] = {
         gene_id_prefix="PF3D7_",
         gene_id_regex=r"PF3D7_\d{7}",
         taxonomy_id=36329,
+        species_taxonomy_id=5833,
         aliases=("pf", "pf3d7", "falciparum"),
     ),
     "pberghei": Organism(
@@ -79,6 +85,7 @@ _REGISTRY: dict[str, Organism] = {
         gene_id_prefix="PBANKA_",
         gene_id_regex=r"PBANKA_\d{6,7}",
         taxonomy_id=5823,
+        species_taxonomy_id=5821,
         aliases=("pb", "pbanka", "berghei"),
     ),
     "pvivax": Organism(
@@ -90,6 +97,7 @@ _REGISTRY: dict[str, Organism] = {
         gene_id_prefix="PVP01_",
         gene_id_regex=r"PVP01_\d{7}",
         taxonomy_id=126793,
+        species_taxonomy_id=5855,
         aliases=("pv", "vivax"),
     ),
     "pknowlesi": Organism(
@@ -101,6 +109,7 @@ _REGISTRY: dict[str, Organism] = {
         gene_id_prefix="PKNH_",
         gene_id_regex=r"PKNH_\d{7}",
         taxonomy_id=5851,
+        species_taxonomy_id=5850,
         aliases=("pk", "knowlesi"),
     ),
     "tgondii": Organism(
@@ -112,6 +121,7 @@ _REGISTRY: dict[str, Organism] = {
         gene_id_prefix="TGME49_",
         gene_id_regex=r"TGME49_\d{6,9}",
         taxonomy_id=508771,
+        species_taxonomy_id=5811,
         aliases=("tg", "tgme49", "gondii", "toxo"),
     ),
 }
