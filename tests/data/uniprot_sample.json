@@ -1,0 +1,23 @@
+{
+  "primaryAccession": "Q8I3H7",
+  "uniProtkbId": "SAMPLE_PLAF7",
+  "proteinDescription": {
+    "recommendedName": {
+      "fullName": { "value": "Sample malaria protein" }
+    }
+  },
+  "genes": [
+    { "geneName": { "value": "SAMP1" } }
+  ],
+  "organism": {
+    "scientificName": "Plasmodium falciparum (isolate 3D7)",
+    "taxonId": 36329
+  },
+  "sequence": { "length": 242 },
+  "comments": [
+    {
+      "commentType": "FUNCTION",
+      "texts": [ { "value": "Involved in a sample biological process." } ]
+    }
+  ]
+}
