@@ -108,7 +108,10 @@ known-first-party = ["plasmopack"]
 # Mypy — strict typing at boundaries (adapters/, io/)
 # ---------------------------------------------------------------------------
 [tool.mypy]
-python_version = "3.11"
+# Analysis target 3.12 so mypy can parse numpy's PEP 695 stubs. Our runtime
+# floor stays 3.11: ruff (target-version py311) enforces 3.11-compatible syntax
+# and CI runs the test suite on 3.11.
+python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
