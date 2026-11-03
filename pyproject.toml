@@ -7,7 +7,10 @@ name = "plasmopack"
 version = "0.1.0.dev0"
 description = "AnnData-native toolkit for Plasmodium and VEuPathDB organism bioinformatics"
 readme = "README.md"
-requires-python = ">=3.11"
+# Upper bound matches the versions we test and for which the scientific stack
+# (h5py/numpy/scipy/pandas) ships binary wheels. Without this, installers may
+# pick a too-new Python (e.g. 3.15) that has no h5py wheel and fail to build.
+requires-python = ">=3.11,<3.14"
 license = { text = "MIT" }
 authors = [
     { name = "Majeed Jamakhani", email = "mjbioinfo@gmail.com" },

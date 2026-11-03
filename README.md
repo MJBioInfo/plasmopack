@@ -39,10 +39,44 @@ adata.write("annotated.h5ad")                 # everything saved, self-documenti
 
 ## Installation
 
+**Requires Python 3.11, 3.12, or 3.13.** (Not yet 3.14+ — the scientific stack
+has no binary wheels there yet.)
+
+From PyPI (once released):
+
 ```bash
 pip install plasmopack                # core
 pip install "plasmopack[all]"         # with all optional features
 ```
+
+From GitHub (current development version):
+
+```bash
+pip install "git+https://github.com/MJBioInfo/plasmopack.git"
+```
+
+### Recommended: a clean environment on a supported Python
+
+Using a fresh virtual environment avoids conflicts and the HDF5 build error below:
+
+```bash
+python3.12 -m venv .venv && source .venv/bin/activate
+pip install "git+https://github.com/MJBioInfo/plasmopack.git"
+```
+
+Or with conda / mamba (gets a pre-built HDF5, no compiler needed):
+
+```bash
+conda create -n myapp python=3.12 anndata -c conda-forge
+conda activate myapp
+pip install "git+https://github.com/MJBioInfo/plasmopack.git"
+```
+
+### Troubleshooting: `Unable to load dependency HDF5` / `Failed building wheel for h5py`
+
+This means you are on an unsupported Python (usually 3.14/3.15) where `h5py` has
+no ready-made wheel and tries to compile from source. **Fix:** use Python 3.11–3.13
+(see the clean-environment commands above). You do **not** need to install HDF5 yourself.
 
 ## Documentation
 

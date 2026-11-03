@@ -3086,7 +3086,7 @@ packages:
 - pypi: ./
   name: plasmopack
   version: 0.1.0.dev0
-  sha256: 07b77dda0992e55e6982290ad02f7fb517d9ef6507d6c580b498212f3acac589
+  sha256: 6b48e9da92562c090fd792c33be6a8700b7d83ff68cc0bfc8ce52b0262db5165
   requires_dist:
   - anndata>=0.10
   - numpy>=1.24
@@ -3112,7 +3112,7 @@ packages:
   - mkdocs-material>=9.5 ; extra == 'docs'
   - mkdocstrings[python]>=0.26 ; extra == 'docs'
   - mkdocs-jupyter>=0.25 ; extra == 'docs'
-  requires_python: '>=3.11'
+  requires_python: '>=3.11,<3.14'
 - pypi: https://files.pythonhosted.org/packages/81/e6/cd9575ac904136b3cbf7aa7ee819ef86eedb7274e46f230e94ea4342e729/platformdirs-4.10.0-py3-none-any.whl
   name: platformdirs
   version: 4.10.0
