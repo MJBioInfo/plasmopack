@@ -8,5 +8,6 @@ cell-cell interaction submodule ``tl.cci`` (Phase 11).
 from __future__ import annotations
 
 from plasmopack.tl import cci
+from plasmopack.tl._deg import deg, list_deg_methods
 
-__all__ = ["cci"]
+__all__ = ["cci", "deg", "list_deg_methods"]
