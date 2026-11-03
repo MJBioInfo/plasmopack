@@ -9,5 +9,6 @@ from __future__ import annotations
 
 from plasmopack.tl import cci
 from plasmopack.tl._deg import deg, list_deg_methods
+from plasmopack.tl._enrich import enrich
 
-__all__ = ["cci", "deg", "list_deg_methods"]
+__all__ = ["cci", "deg", "enrich", "list_deg_methods"]
