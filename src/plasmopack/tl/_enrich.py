@@ -53,6 +53,8 @@ def _query_from_deg(
     direction: str,
     padj_cutoff: float,
     lfc_cutoff: float,
+    top_n: int | None,
+    rank_by: str,
 ) -> list[str]:
     store = adata.uns.get("deg", {})
     if groupby not in store or deg_method not in store[groupby]:
@@ -60,18 +62,35 @@ def _query_from_deg(
             f"No DEG result at adata.uns['deg'][{groupby!r}][{deg_method!r}]. "
             f"Run pp.tl.deg(adata, {groupby!r}, method={deg_method!r}) first."
         )
-    df = store[groupby][deg_method]
+    df = store[groupby][deg_method].copy()
     df = df[df["group"].astype(str) == str(group)]
-    sig = df["padj"] < padj_cutoff
+
+    # 1. direction filter (always applied)
     if direction == "up":
-        sig &= df["logFC"] > lfc_cutoff
+        df = df[df["logFC"] > 0]
     elif direction == "down":
-        sig &= df["logFC"] < -lfc_cutoff
-    elif direction == "both":
-        sig &= df["logFC"].abs() > lfc_cutoff
-    else:
+        df = df[df["logFC"] < 0]
+    elif direction != "both":
         raise ValueError("direction must be 'up', 'down', or 'both'.")
-    return [str(g) for g in df.loc[sig, "gene"]]
+
+    if top_n is None:
+        # 2a. CUTOFF selection: combined padj AND |logFC| thresholds (default)
+        sig = (df["padj"] < padj_cutoff) & (df["logFC"].abs() >= lfc_cutoff)
+        return [str(g) for g in df.loc[sig, "gene"]]
+
+    # 2b. TOP-N selection: rank then take the best N
+    nlp = -np.log10(np.clip(df["padj"].to_numpy(), 1e-300, 1.0))
+    alfc = df["logFC"].abs().to_numpy()
+    if rank_by == "padj":
+        score = nlp
+    elif rank_by == "logfc":
+        score = alfc
+    elif rank_by == "combined":
+        score = nlp * alfc  # significance weighted by effect size
+    else:
+        raise ValueError("rank_by must be 'padj', 'logfc', or 'combined'.")
+    order = np.argsort(score)[::-1][:top_n]
+    return [str(g) for g in df["gene"].to_numpy()[order]]
 
 
 def enrich(
@@ -85,6 +104,8 @@ def enrich(
     direction: str = "up",
     padj_cutoff: float = 0.05,
     lfc_cutoff: float = 1.0,
+    top_n: int | None = None,
+    rank_by: str = "combined",
     background: Iterable[str] | None = None,
     min_set: int = 5,
     max_set: int = 500,
@@ -95,8 +116,16 @@ def enrich(
     Provide the query genes one of two ways:
 
     1. explicitly via ``genes=[...]``, or
-    2. from a stored DEG result via ``groupby`` + ``group`` (filtered by
-       ``direction``/``padj_cutoff``/``lfc_cutoff``).
+    2. from a stored DEG result via ``groupby`` + ``group``.
+
+    When pulling from DEG, choose **how** genes are selected:
+
+    - **Cutoff (default):** significant *and* strong — ``padj < padj_cutoff``
+      **and** ``|logFC| >= lfc_cutoff`` (after the ``direction`` filter).
+    - **Top-N ranked:** set ``top_n`` to take the best N genes ranked by
+      ``rank_by``: ``"padj"`` (most significant), ``"logfc"`` (largest fold
+      change), or ``"combined"`` (``-log10(padj) * |logFC|`` — significance
+      weighted by effect size; the recommended single ranking).
 
     Parameters
     ----------
@@ -136,7 +165,15 @@ def enrich(
         source_label = key_added or "custom"
     elif groupby is not None and group is not None:
         query = _query_from_deg(
-            adata, groupby, group, deg_method, direction, padj_cutoff, lfc_cutoff
+            adata,
+            groupby,
+            group,
+            deg_method,
+            direction,
+            padj_cutoff,
+            lfc_cutoff,
+            top_n,
+            rank_by,
         )
         source_label = key_added or f"{groupby}:{group}:{direction}"
     else:

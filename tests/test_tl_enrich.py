@@ -95,6 +95,66 @@ def test_from_deg_path() -> None:
     assert res.iloc[0]["set_id"] == "PATH:1"
 
 
+def test_top_n_ranked_selection() -> None:
+    adata = _adata_with_background()
+    # 20 genes; gene0..g9 strong, g10..g19 weak. top_n=5 by combined should
+    # pick 5 of the strong ones -> PATH:1 still enriched.
+    deg_df = pd.DataFrame(
+        {
+            "group": "A",
+            "gene": [f"g{i}" for i in range(20)],
+            "logFC": [5.0 - 0.1 * i for i in range(10)] + [0.2] * 10,
+            "pval": [1e-8] * 10 + [0.5] * 10,
+            "padj": [1e-7] * 10 + [0.5] * 10,
+            "method": "wilcoxon",
+        }
+    )
+    adata.uns["deg"] = {"group": {"wilcoxon": deg_df}}
+    pp.tl.enrich(
+        adata,
+        _sets(),
+        groupby="group",
+        group="A",
+        direction="up",
+        top_n=5,
+        rank_by="combined",
+        min_set=5,
+        key_added="topn",
+    )
+    res = adata.uns["enrichment"]["topn"]
+    # 5 selected genes all in PATH:1 -> it's the hit
+    assert res.iloc[0]["set_id"] == "PATH:1"
+    assert res.iloc[0]["n_overlap"] == 5
+
+
+def test_rank_by_invalid_raises() -> None:
+    adata = _adata_with_background()
+    adata.uns["deg"] = {
+        "group": {
+            "wilcoxon": pd.DataFrame(
+                {
+                    "group": ["A"],
+                    "gene": ["g0"],
+                    "logFC": [2.0],
+                    "pval": [1e-3],
+                    "padj": [1e-2],
+                    "method": ["wilcoxon"],
+                }
+            )
+        }
+    }
+    with pytest.raises(ValueError, match="rank_by must be"):
+        pp.tl.enrich(
+            adata,
+            _sets(),
+            groupby="group",
+            group="A",
+            top_n=1,
+            rank_by="bogus",
+            min_set=1,
+        )
+
+
 def test_missing_deg_result_errors() -> None:
     adata = _adata_with_background()
     with pytest.raises(KeyError, match="No DEG result"):

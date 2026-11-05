@@ -42,6 +42,9 @@ dependencies = [
     "numpy>=1.24",
     "pandas>=2.0",
     "scipy>=1.11",
+    # matplotlib is the one plotting dependency; like scipy it is foundational
+    # and stable, and plotting (pp.pl) is core to a scanpy-style toolkit.
+    "matplotlib>=3.7",
 ]
 
 [project.optional-dependencies]

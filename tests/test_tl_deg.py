@@ -62,6 +62,26 @@ def test_unknown_method_raises() -> None:
         pp.tl.deg(adata, "group", method="nope")
 
 
+def test_methods_table_has_expects_column() -> None:
+    tbl = pp.tl.list_deg_methods()
+    assert "expects" in tbl.columns
+    assert "log-normalized" in tbl.loc["wilcoxon", "expects"]
+    assert "raw" in tbl.loc["pseudobulk", "expects"]
+
+
+def test_warns_when_counts_given_to_cell_method() -> None:
+    adata = _toy()
+    # feeding raw counts to a cell-level method should warn
+    with pytest.warns(UserWarning, match="looks like raw counts"):
+        pp.tl.deg(adata, "group", method="wilcoxon", layer="counts")
+
+
+def test_missing_layer_gives_clear_error() -> None:
+    adata = _toy()
+    with pytest.raises(KeyError, match="not found in adata.layers"):
+        pp.tl.deg(adata, "group", method="wilcoxon", layer="nonexistent")
+
+
 # -- wilcoxon (core) --------------------------------------------------------
 def test_wilcoxon_detects_markers() -> None:
     adata = _toy()

@@ -1,9 +1,16 @@
 """Plotting — matplotlib-based visualizations.
 
-DEG, compositional, enrichment, TF, and combined figures. Every function
-returns a matplotlib ``Figure``. See Phase 10 in ``publish/ROADMAP.md``.
+Every function returns a matplotlib ``Figure``. See Phase 10 in
+``publish/ROADMAP.md``.
+
+Public functions
+----------------
+- :func:`pathway_chord` — circos-style pathway <-> gene chord diagram,
+  genes coloured by fold change
 """
 
 from __future__ import annotations
 
-__all__: list[str] = []
+from plasmopack.pl._chord import pathway_chord
+
+__all__ = ["pathway_chord"]

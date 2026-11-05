@@ -44,60 +44,76 @@ class DEGMethod:
     extra: str | None  # pip extra needed, or None for core
     needs_module: str | None  # importable module that must be present
     needs_replicates: bool
+    expects: str  # what input data the method expects
     description: str
 
 
+# What each data level expects as input (so users pick the right layer).
+_CELL_EXPECTS = (
+    "log-normalized expression (e.g. run pp.normalize, uses layer='lognorm')"
+)
+_PB_EXPECTS = (
+    "raw integer counts (uses layer='counts'); needs sample_key for replicates"
+)
+
 _METHODS: dict[str, DEGMethod] = {
     "wilcoxon": DEGMethod(
-        "wilcoxon",
-        "cell",
-        None,
-        None,
-        False,
-        "Mann-Whitney/Wilcoxon rank-sum per gene (non-parametric, core).",
+        name="wilcoxon",
+        level="cell",
+        extra=None,
+        needs_module=None,
+        needs_replicates=False,
+        expects=_CELL_EXPECTS,
+        description="Mann-Whitney/Wilcoxon rank-sum per gene (non-parametric, core).",
     ),
     "t-test": DEGMethod(
-        "t-test",
-        "cell",
-        None,
-        None,
-        False,
-        "Welch's t-test per gene (core).",
+        name="t-test",
+        level="cell",
+        extra=None,
+        needs_module=None,
+        needs_replicates=False,
+        expects=_CELL_EXPECTS,
+        description="Welch's t-test per gene (core).",
     ),
     "pseudobulk": DEGMethod(
-        "pseudobulk",
-        "pseudobulk",
-        None,
-        None,
-        True,
-        "Aggregate counts per replicate, then Welch's t-test across "
+        name="pseudobulk",
+        level="pseudobulk",
+        extra=None,
+        needs_module=None,
+        needs_replicates=True,
+        expects=_PB_EXPECTS,
+        description="Aggregate counts per replicate, then Welch's t-test across "
         "replicates (replicate-aware, core). Requires sample_key.",
     ),
     "deseq2": DEGMethod(
-        "deseq2",
-        "pseudobulk",
-        "deg",
-        "pydeseq2",
-        True,
-        "Pseudobulk negative-binomial GLM via pydeseq2 (gold standard for "
-        "multi-sample designs). Requires sample_key and plasmopack[deg].",
+        name="deseq2",
+        level="pseudobulk",
+        extra="deg",
+        needs_module="pydeseq2",
+        needs_replicates=True,
+        expects=_PB_EXPECTS,
+        description="Pseudobulk negative-binomial GLM via pydeseq2 (gold standard "
+        "for multi-sample designs). Requires sample_key and plasmopack[deg].",
     ),
     "logreg": DEGMethod(
-        "logreg",
-        "cell",
-        "ml",
-        "sklearn",
-        False,
-        "Logistic regression per gene via scikit-learn. Requires plasmopack[ml].",
+        name="logreg",
+        level="cell",
+        extra="ml",
+        needs_module="sklearn",
+        needs_replicates=False,
+        expects=_CELL_EXPECTS,
+        description="Logistic regression per gene via scikit-learn. "
+        "Requires plasmopack[ml].",
     ),
     "mast": DEGMethod(
-        "mast",
-        "cell",
-        None,
-        "rpy2",
-        False,
-        "MAST hurdle model (zero-inflation aware). Needs R + MAST via rpy2; "
-        "not yet implemented.",
+        name="mast",
+        level="cell",
+        extra=None,
+        needs_module="rpy2",
+        needs_replicates=False,
+        expects=_CELL_EXPECTS,
+        description="MAST hurdle model (zero-inflation aware). Needs R + MAST "
+        "via rpy2; not yet implemented.",
     ),
 }
 
@@ -121,10 +137,47 @@ def list_deg_methods() -> pd.DataFrame:
                 "available": _available(m),
                 "extra": m.extra or "(core)",
                 "needs_replicates": m.needs_replicates,
+                "expects": m.expects,
                 "description": m.description,
             }
         )
     return pd.DataFrame(rows).set_index("method")
+
+
+def _looks_like_counts(x: Any) -> bool:
+    """Heuristic: does this matrix look like raw integer counts?"""
+    sample = _to_dense(x[: min(50, x.shape[0])])
+    if sample.size == 0:
+        return False
+    finite = sample[np.isfinite(sample)]
+    if finite.size == 0:
+        return False
+    nonneg = bool((finite >= 0).all())
+    # log-normalized data is non-integer; all-integer non-negative values with
+    # some magnitude are the signature of raw counts. The integer test is the
+    # reliable discriminator; max>1 just rules out boolean/degenerate matrices.
+    integral = bool(np.allclose(finite, np.round(finite)))
+    return nonneg and integral and float(finite.max()) > 1.0
+
+
+def _warn_input_mismatch(x: Any, spec: DEGMethod, layer: str | None) -> None:
+    """Warn if the chosen data looks wrong for the method's level."""
+    is_counts = _looks_like_counts(x)
+    where = f"layer={layer!r}" if layer is not None else "adata.X"
+    if spec.level == "cell" and is_counts:
+        warnings.warn(
+            f"method={spec.name!r} expects {spec.expects}, but {where} looks "
+            f"like raw counts. Run pp.normalize(adata) first and/or pass "
+            f"layer='lognorm'. Proceeding, but results may be unreliable.",
+            stacklevel=3,
+        )
+    elif spec.level == "pseudobulk" and not is_counts:
+        warnings.warn(
+            f"method={spec.name!r} expects {spec.expects}, but {where} does not "
+            f"look like raw counts. Pass layer='counts' (raw). Proceeding, but "
+            f"results may be unreliable.",
+            stacklevel=3,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -232,13 +285,22 @@ def deg(
     all_groups = list(dict.fromkeys(labels))
     test_groups = groups if groups is not None else all_groups
 
-    # choose default layer per method level
+    # choose default layer per method level (documented in list_deg_methods)
     if layer is None:
         if spec.level == "pseudobulk":
             layer = "counts" if "counts" in adata.layers else None
         else:
             layer = "lognorm" if "lognorm" in adata.layers else None
+    if layer is not None and layer not in adata.layers:
+        raise KeyError(
+            f"layer={layer!r} not found in adata.layers "
+            f"(available: {list(adata.layers)}). method={method!r} expects "
+            f"{spec.expects}."
+        )
     x = adata.layers[layer] if layer is not None else adata.X
+
+    # help the user: warn if the data looks wrong for this method's level
+    _warn_input_mismatch(x, spec, layer)
 
     var_names = np.asarray(adata.var_names)
     frames: list[pd.DataFrame] = []
