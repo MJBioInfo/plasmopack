@@ -30,6 +30,32 @@ from scipy import stats
 from plasmopack._utils.provenance import record_provenance
 from plasmopack.io import GeneSets, read_gmt
 
+_COLLECTIONS = {"GO", "BP", "CC", "MF"}
+
+
+def _resolve_gene_sets(
+    adata: AnnData, gene_sets: GeneSets | str | Path, organism: str | None
+) -> GeneSets:
+    """Turn the ``gene_sets`` argument into a GeneSets object.
+
+    Accepts a GeneSets (returned as-is), a collection name ("GO"/"BP"/"CC"/"MF"
+    -> bundled defaults for the resolved organism), or a path to a .gmt file.
+    """
+    if isinstance(gene_sets, GeneSets):
+        return gene_sets
+    if isinstance(gene_sets, str) and gene_sets in _COLLECTIONS:
+        from plasmopack import datasets as _ds
+
+        org = organism or adata.uns.get("organism") or _ds.detect_organism(adata)
+        if org is None:
+            raise ValueError(
+                f"gene_sets={gene_sets!r} needs an organism, but it could not be "
+                f"detected from the gene IDs. Pass organism='pberghei' (or set "
+                f"adata.uns['organism'])."
+            )
+        return _ds.gene_sets(str(org), collection=gene_sets)
+    return read_gmt(gene_sets)
+
 
 def _bh(pvals: np.ndarray) -> np.ndarray:
     p = np.asarray(pvals, dtype=float)
@@ -97,6 +123,7 @@ def enrich(
     adata: AnnData,
     gene_sets: GeneSets | str | Path,
     *,
+    organism: str | None = None,
     genes: Sequence[str] | None = None,
     groupby: str | None = None,
     group: str | None = None,
@@ -132,7 +159,15 @@ def enrich(
     adata
         Annotated data; result written to ``adata.uns["enrichment"]``.
     gene_sets
-        A :class:`~plasmopack.io.GeneSets`, or a path to a ``.gmt`` file.
+        One of: a :class:`~plasmopack.io.GeneSets`; a path to a ``.gmt`` file;
+        or a **collection name** string — ``"GO"`` (all aspects), ``"BP"``,
+        ``"CC"`` or ``"MF"`` — which loads the bundled default gene sets for the
+        organism. The organism is taken from ``organism=``, else
+        ``adata.uns["organism"]``, else auto-detected from the gene-ID pattern
+        in ``adata.var_names``.
+    organism
+        Organism key/alias for resolving a collection-name ``gene_sets``. If not
+        given, it is detected automatically.
     genes
         Explicit query gene list. Overrides the DEG path if given.
     groupby, group
@@ -157,8 +192,7 @@ def enrich(
         DataFrame (set_id, name, set_size, n_overlap, odds_ratio, pval, padj,
         overlap_genes), sorted by padj.
     """
-    if isinstance(gene_sets, (str, Path)):
-        gene_sets = read_gmt(gene_sets)
+    gene_sets = _resolve_gene_sets(adata, gene_sets, organism)
 
     if genes is not None:
         query = [str(g) for g in genes]

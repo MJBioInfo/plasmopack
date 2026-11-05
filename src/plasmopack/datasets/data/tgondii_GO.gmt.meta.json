@@ -1,0 +1,13 @@
+{
+  "_summary": {
+    "gmt_file": "tgondii_GO.gmt",
+    "n_genes_total": 3778,
+    "n_sets": 511
+  },
+  "collection": "GO",
+  "max_set": 500,
+  "min_set": 5,
+  "organism": "tgondii",
+  "source": "UniProt",
+  "version": "UniProt-2026-11-05"
+}

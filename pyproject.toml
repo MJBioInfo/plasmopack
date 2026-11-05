@@ -83,6 +83,8 @@ Issues = "https://github.com/MJBioInfo/plasmopack/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/plasmopack"]
+# Ensure bundled gene-set snapshots (GMT + sidecars) ship inside the wheel.
+artifacts = ["*.gmt", "*.gmt.meta.json"]
 
 # ---------------------------------------------------------------------------
 # Ruff — linting + formatting

@@ -43,4 +43,5 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Getting started: getting-started.md
+  - Usage guide: usage.md
   - API reference: api.md

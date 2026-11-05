@@ -3635,7 +3635,7 @@ packages:
 - pypi: ./
   name: plasmopack
   version: 0.1.0.dev0
-  sha256: c9f15b5da75e87ab3da34fbed2df01e826089e4c5dc0c63797952554e2c7a476
+  sha256: ef10274e06d63bce04951158fa63c456d24333597b04b3e423b5862ec9599e3a
   requires_dist:
   - anndata>=0.10
   - numpy>=1.24

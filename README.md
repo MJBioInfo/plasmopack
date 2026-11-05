@@ -16,15 +16,31 @@ transcription factors — all without ever leaving your `AnnData` object.
 ```python
 import plasmopack as pp
 
-adata = pp.io.read_h5ad("my_parasite_data.h5ad")
+adata = pp.io.read_h5ad("my_parasite_data.h5ad")   # PBANKA_/PF3D7_ gene IDs
 
-pp.pp.qc_metrics(adata)                       # QC (apicoplast %, gene counts)
-pp.tl.deg(adata, groupby="time")              # differential expression
-pp.tl.enrich(adata, gene_sets="GO")           # pathway enrichment (3 modes)
-pp.pl.deg_volcano(adata)                      # plot — results stay in AnnData
+pp.pp.qc_metrics(adata)                              # QC metrics -> adata.obs
+pp.pp.normalize(adata)                               # -> adata.layers["lognorm"]
+pp.tl.deg(adata, "time", method="wilcoxon")          # differential expression
+pp.tl.enrich(adata, gene_sets="GO",                  # pathways, zero setup
+             groupby="time", group="24h", direction="up")
+fig = pp.pl.pathway_chord(adata, "time:24h:up",      # circos chord plot
+                          groupby="time", group="24h")
 
-adata.write("annotated.h5ad")                 # everything saved, self-documenting
+adata.write("annotated.h5ad")                        # everything saved, self-documenting
 ```
+
+**Pathways with zero setup.** `gene_sets="GO"` (or `"BP"`/`"CC"`/`"MF"`) loads
+**bundled default gene sets** — the organism is auto-detected from the gene-ID
+pattern (`PBANKA_` → *P. berghei*). Bundled for *P. berghei, P. falciparum,
+P. knowlesi, T. gondii*; `pp.datasets.build_gene_sets("pberghei")` fetches the
+latest from UniProt; or pass your own `GeneSets`/`.gmt`. See the
+[usage guide](docs/usage.md).
+
+**You choose the method.** `pp.tl.list_deg_methods()` lists every DE method
+(`wilcoxon`, `t-test`, `pseudobulk`, `deseq2`, `logreg`, …), what each expects,
+and which need biological replicates — and `deg` warns if you feed it the wrong
+layer. Enrichment gene selection is equally explicit (significance+fold-change
+cutoff, or top-N ranked by `padj`/`logfc`/`combined`).
 
 ## Design principles
 
