@@ -87,8 +87,16 @@ def test_bad_collection_raises() -> None:
         gene_sets("pberghei", "NONSENSE")
 
 
+def test_kegg_bundled_and_named() -> None:
+    kegg = gene_sets("pberghei", "KEGG")
+    assert len(kegg) > 20
+    assert kegg.metadata["collection"] == "KEGG"
+    # readable pathway names survive (not just KEGG ids)
+    assert any("metabol" in s.name.lower() or "glycol" in s.name.lower() for s in kegg)
+
+
 def test_unbundled_organism_raises() -> None:
-    with pytest.raises(FileNotFoundError, match="No bundled gene sets"):
+    with pytest.raises(FileNotFoundError, match="No bundled"):
         gene_sets("pvivax", "GO")
 
 
@@ -116,6 +124,40 @@ def test_enrich_with_go_string_autodetect() -> None:
     res = a.uns["enrichment"]["e"]
     # translation term should be a top hit (its genes are the query)
     assert "GO:0006412" in set(res["set_id"])
+
+
+def test_enrich_multi_collection_one_table() -> None:
+    # GO + KEGG in one call -> single table with a 'collection' column
+    go = gene_sets("pberghei", "GO")
+    genes = sorted(go["GO:0006412"].genes)[:30]
+    a = AnnData(X=np.ones((4, len(genes)), dtype=np.float32))
+    a.var_names = genes
+    a.uns["deg"] = {
+        "time": {
+            "wilcoxon": pd.DataFrame(
+                {
+                    "group": "24h",
+                    "gene": genes,
+                    "logFC": [3.0] * len(genes),
+                    "pval": [1e-6] * len(genes),
+                    "padj": [1e-5] * len(genes),
+                    "method": "wilcoxon",
+                }
+            )
+        }
+    }
+    pp.tl.enrich(
+        a,
+        ["GO", "KEGG"],
+        groupby="time",
+        group="24h",
+        direction="up",
+        key_added="multi",
+    )
+    res = a.uns["enrichment"]["multi"]
+    assert "collection" in res.columns
+    assert set(res["collection"].unique()) <= {"GO", "KEGG"}
+    assert "GO" in set(res["collection"])
 
 
 def test_enrich_go_string_no_organism_detectable() -> None:

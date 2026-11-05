@@ -74,12 +74,25 @@ pp.tl.enrich(adata, gene_sets="GO", groupby="time", group="24h", direction="up")
 |--------------|---------|
 | `"GO"` | all Gene Ontology (BP + CC + MF) |
 | `"BP"` / `"CC"` / `"MF"` | one GO aspect |
+| `"KEGG"` | KEGG metabolic pathways |
+| `["GO", "KEGG"]` | **both, in one combined table** (a `collection` column tags each row) |
 | a `GeneSets` object | your own sets |
-| a path to a `.gmt` | your own file |
+| a path to a `.gmt` | your own file (any source — PlasmoDB export, MSigDB, …) |
 
-Bundled organisms: **P. berghei, P. falciparum, P. knowlesi, T. gondii**
+```python
+# GO + KEGG together -> one table in adata.uns["enrichment"][label]
+pp.tl.enrich(adata, ["GO", "KEGG"], groupby="time", group="24h", direction="up")
+```
+
+Bundled (GO **and** KEGG): **P. berghei, P. falciparum, P. knowlesi, T. gondii**
 (`pp.datasets.list_bundled_gene_sets()`). For others, or for the latest
 annotations, build them live (below) or pass your own GMT.
+
+!!! note "Coverage is a *Plasmodium* reality, not a tool limit"
+    Only ~2,800 of *P. berghei*'s ~5,000 genes have **any** GO annotation in
+    UniProt/QuickGO/GO — ~45% of parasite genes are "unknown function" with no
+    pathway anywhere. KEGG adds ~110 metabolic pathways. For the most complete
+    GO set, PlasmoDB's own GAF can be converted to a GMT and passed directly.
 
 ### How genes are selected (your choice)
 
@@ -103,9 +116,21 @@ exact (same as PlasmoDB's web tool), BH-adjusted.
 ### Getting / refreshing the default gene sets
 
 ```python
-gs = pp.datasets.gene_sets("pberghei", "GO")          # load bundled snapshot
-gs = pp.datasets.build_gene_sets("pberghei",          # fetch LATEST from UniProt
-                                 save_to="pb_GO.gmt")
+gs = pp.datasets.gene_sets("pberghei", "GO")          # load bundled GO snapshot
+gs = pp.datasets.gene_sets("pberghei", "KEGG")        # load bundled KEGG snapshot
+gs = pp.datasets.build_gene_sets("pberghei",          # fetch LATEST GO from UniProt
+                                 collection="GO", save_to="pb_GO.gmt")
+gs = pp.datasets.build_gene_sets("pberghei",          # fetch LATEST KEGG
+                                 collection="KEGG", save_to="pb_KEGG.gmt")
+```
+
+### Bring your own gene sets (works with anything)
+
+Any `.gmt` file or `GeneSets` object works — so a full PlasmoDB GO export, a
+custom pathway list, or MSigDB-style sets all plug straight in:
+
+```python
+pp.tl.enrich(adata, "my_pathways.gmt", groupby="time", group="24h")
 ```
 
 Every snapshot is version-stamped; `enrich` records which version was used.

@@ -21,6 +21,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
 from pathlib import Path
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -30,7 +31,49 @@ from scipy import stats
 from plasmopack._utils.provenance import record_provenance
 from plasmopack.io import GeneSets, read_gmt
 
-_COLLECTIONS = {"GO", "BP", "CC", "MF"}
+_COLLECTIONS = {"GO", "BP", "CC", "MF", "KEGG"}
+
+
+def _collection_label(gs: GeneSets, fallback: str) -> str:
+    c = gs.metadata.get("collection")
+    return str(c) if c else fallback
+
+
+def _ora_rows(
+    query_set: set[str],
+    universe: set[str],
+    gs: GeneSets,
+    min_set: int,
+    max_set: int,
+    collection: str,
+) -> list[dict[str, Any]]:
+    """Fisher's-exact ORA of one GeneSets; returns row dicts (no padj yet)."""
+    n_query = len(query_set)
+    big_n = len(universe)
+    rows: list[dict[str, Any]] = []
+    for s in gs:
+        members = set(s.genes) & universe
+        k_set = len(members)
+        if k_set < min_set or k_set > max_set:
+            continue
+        overlap = query_set & members
+        k = len(overlap)
+        table = [[k, n_query - k], [k_set - k, big_n - n_query - (k_set - k)]]
+        odds, pval = stats.fisher_exact(table, alternative="greater")
+        rows.append(
+            {
+                "collection": collection,
+                "set_id": s.id,
+                "name": s.name,
+                "description": s.description,
+                "set_size": k_set,
+                "n_overlap": k,
+                "odds_ratio": float(odds),
+                "pval": float(pval),
+                "overlap_genes": ",".join(sorted(overlap)),
+            }
+        )
+    return rows
 
 
 def _resolve_gene_sets(
@@ -55,6 +98,24 @@ def _resolve_gene_sets(
             )
         return _ds.gene_sets(str(org), collection=gene_sets)
     return read_gmt(gene_sets)
+
+
+def _resolve_collections(
+    adata: AnnData,
+    gene_sets: GeneSets | str | Path | Sequence[GeneSets | str | Path],
+    organism: str | None,
+) -> list[tuple[str, GeneSets]]:
+    """Resolve the gene_sets argument into a list of (collection_label, GeneSets)."""
+    items: Sequence[GeneSets | str | Path] = cast(
+        "Sequence[GeneSets | str | Path]",
+        gene_sets if isinstance(gene_sets, (list, tuple)) else [gene_sets],
+    )
+    out: list[tuple[str, GeneSets]] = []
+    for item in items:
+        gs = _resolve_gene_sets(adata, item, organism)
+        label = item if isinstance(item, str) else _collection_label(gs, "custom")
+        out.append((str(label), gs))
+    return out
 
 
 def _bh(pvals: np.ndarray) -> np.ndarray:
@@ -121,7 +182,7 @@ def _query_from_deg(
 
 def enrich(
     adata: AnnData,
-    gene_sets: GeneSets | str | Path,
+    gene_sets: GeneSets | str | Path | Sequence[GeneSets | str | Path],
     *,
     organism: str | None = None,
     genes: Sequence[str] | None = None,
@@ -160,11 +221,13 @@ def enrich(
         Annotated data; result written to ``adata.uns["enrichment"]``.
     gene_sets
         One of: a :class:`~plasmopack.io.GeneSets`; a path to a ``.gmt`` file;
-        or a **collection name** string — ``"GO"`` (all aspects), ``"BP"``,
-        ``"CC"`` or ``"MF"`` — which loads the bundled default gene sets for the
-        organism. The organism is taken from ``organism=``, else
-        ``adata.uns["organism"]``, else auto-detected from the gene-ID pattern
-        in ``adata.var_names``.
+        a **collection name** string — ``"GO"`` (all aspects), ``"BP"``,
+        ``"CC"``, ``"MF"`` or ``"KEGG"`` — which loads the bundled default gene
+        sets for the organism; or a **list** of any of these, e.g.
+        ``["GO", "KEGG"]``, which runs them all and returns **one combined
+        table** with a ``collection`` column. The organism is taken from
+        ``organism=``, else ``adata.uns["organism"]``, else auto-detected from
+        the gene-ID pattern in ``adata.var_names``.
     organism
         Organism key/alias for resolving a collection-name ``gene_sets``. If not
         given, it is detected automatically.
@@ -192,7 +255,7 @@ def enrich(
         DataFrame (set_id, name, set_size, n_overlap, odds_ratio, pval, padj,
         overlap_genes), sorted by padj.
     """
-    gene_sets = _resolve_gene_sets(adata, gene_sets, organism)
+    collections = _resolve_collections(adata, gene_sets, organism)
 
     if genes is not None:
         query = [str(g) for g in genes]
@@ -222,52 +285,35 @@ def enrich(
     n_query = len(query_set)
     big_n = len(universe)
 
-    rows = []
-    for gs in gene_sets:
-        members = set(gs.genes) & universe
-        k_set = len(members)
-        if k_set < min_set or k_set > max_set:
-            continue
-        overlap = query_set & members
-        k = len(overlap)
-        # 2x2: [[in query & in set, in query & not set],
-        #       [not query & in set, not query & not set]]
-        table = [
-            [k, n_query - k],
-            [k_set - k, big_n - n_query - (k_set - k)],
-        ]
-        odds, pval = stats.fisher_exact(table, alternative="greater")
-        rows.append(
-            {
-                "set_id": gs.id,
-                "name": gs.name,
-                "description": gs.description,
-                "set_size": k_set,
-                "n_overlap": k,
-                "odds_ratio": float(odds),
-                "pval": float(pval),
-                "overlap_genes": ",".join(sorted(overlap)),
-            }
+    # Run ORA for each collection; BH-adjust within each collection (its own
+    # multiple-testing family), then combine into one table.
+    frames = []
+    for label, gs in collections:
+        rows = _ora_rows(query_set, universe, gs, min_set, max_set, label)
+        df = pd.DataFrame(rows)
+        if not df.empty:
+            df["padj"] = _bh(df["pval"].to_numpy())
+            frames.append(df)
+    cols = [
+        "collection",
+        "set_id",
+        "name",
+        "description",
+        "set_size",
+        "n_overlap",
+        "odds_ratio",
+        "pval",
+        "padj",
+        "overlap_genes",
+    ]
+    if frames:
+        result = pd.concat(frames, ignore_index=True)
+        result = result.sort_values(["collection", "padj"], kind="stable").reset_index(
+            drop=True
         )
-
-    result = pd.DataFrame(rows)
-    if not result.empty:
-        result["padj"] = _bh(result["pval"].to_numpy())
-        result = result.sort_values("padj", kind="stable").reset_index(drop=True)
+        result = result[cols]
     else:
-        result = pd.DataFrame(
-            columns=[
-                "set_id",
-                "name",
-                "description",
-                "set_size",
-                "n_overlap",
-                "odds_ratio",
-                "pval",
-                "padj",
-                "overlap_genes",
-            ]
-        )
+        result = pd.DataFrame(columns=cols)
 
     store = adata.uns.setdefault("enrichment", {})
     if not isinstance(store, dict):
@@ -281,12 +327,16 @@ def enrich(
         params={
             "method": "ora",
             "label": source_label,
+            "collections": [c for c, _ in collections],
             "n_query": n_query,
             "n_background": big_n,
             "min_set": min_set,
             "max_set": max_set,
             "direction": direction if genes is None else None,
         },
-        sources={"gmt_version": str(gene_sets.metadata.get("version", "unknown"))},
+        sources={
+            f"{c}_version": str(gs.metadata.get("version", "unknown"))
+            for c, gs in collections
+        },
     )
     return adata

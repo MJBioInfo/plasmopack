@@ -183,71 +183,47 @@ def pathway_chord(
         fig = parent if isinstance(parent, Figure) else plt.figure(figsize=figsize)
     ax.set_aspect("equal")
     ax.axis("off")
-    ax.set_xlim(-1.45, 1.45)
-    ax.set_ylim(-1.35, 1.35)
+    ax.set_xlim(-1.7, 1.7)
+    ax.set_ylim(-1.55, 1.55)
 
     vmax = max((abs(float(lfc_map.get(g, 0.0))) for g in genes), default=1.0)
 
-    # draw gene wedges + labels
+    def _radial(mid: float) -> tuple[float, str]:
+        """Rotation + horizontal alignment so a label reads outward, upright."""
+        m = mid % 360
+        if 90 < m < 270:  # left half -> flip so text isn't upside-down
+            return mid - 180, "right"
+        return mid, "left"
+
+    # draw gene wedges + labels (coloured by fold change)
     for g in genes:
         a0, a1 = gene_span[g]
         col = _gene_color(float(lfc_map.get(g, 0.0)), vmax, up_color, down_color)
         ax.add_patch(
-            Wedge(
-                (0, 0),
-                _R_OUTER,
-                a0,
-                a1,
-                width=_R_OUTER - _R_INNER,
-                facecolor=col,
-                edgecolor="white",
-                linewidth=0.5,
-                zorder=3,
-            )
+            Wedge((0, 0), _R_OUTER, a0, a1, width=_R_OUTER - _R_INNER,
+                  facecolor=col, edgecolor="white", linewidth=0.5, zorder=3)
         )
         mid = gene_mid[g]
-        lx, ly = _polar(mid, _R_OUTER + 0.04)
-        ax.text(
-            lx,
-            ly,
-            g,
-            rotation=mid,
-            rotation_mode="anchor",
-            ha="left",
-            va="center",
-            fontsize=6.5,
-        )
+        rot, ha = _radial(mid)
+        lx, ly = _polar(mid, _R_OUTER + 0.03)
+        label = g if len(g) <= 16 else g[:15] + "…"
+        ax.text(lx, ly, label, rotation=rot, rotation_mode="anchor",
+                ha=ha, va="center", fontsize=6.5)
 
     # draw pathway wedges + labels
     for pi, (name, _) in enumerate(pathways):
         a0, a1 = pathway_span[pi]
         ax.add_patch(
-            Wedge(
-                (0, 0),
-                _R_OUTER,
-                a0,
-                a1,
-                width=_R_OUTER - _R_INNER,
-                facecolor=_PATHWAY_COLORS[pi % len(_PATHWAY_COLORS)],
-                edgecolor="white",
-                linewidth=0.5,
-                zorder=3,
-            )
+            Wedge((0, 0), _R_OUTER, a0, a1, width=_R_OUTER - _R_INNER,
+                  facecolor=_PATHWAY_COLORS[pi % len(_PATHWAY_COLORS)],
+                  edgecolor="white", linewidth=0.5, zorder=3)
         )
         mid = 0.5 * (a0 + a1)
-        lx, ly = _polar(mid, _R_OUTER + 0.04)
-        rot = mid - 180
-        ax.text(
-            lx,
-            ly,
-            name,
-            rotation=rot,
-            rotation_mode="anchor",
-            ha="right",
-            va="center",
-            fontsize=8,
-            fontweight="bold",
-        )
+        rot, ha = _radial(mid)
+        lx, ly = _polar(mid, _R_OUTER + 0.05)
+        disp = name if len(name) <= 28 else name[:27] + "…"
+        ax.text(lx, ly, disp, rotation=rot, rotation_mode="anchor",
+                ha=ha, va="center", fontsize=8.5, fontweight="bold")
 
     # draw ribbons: subdivide each pathway arc among its links and connect
     for pi in range(len(pathways)):
@@ -259,8 +235,11 @@ def pathway_chord(
         sub = np.linspace(a0, a1, len(p_links) + 1)
         for j, g in enumerate(p_links):
             gb0, gb1 = gene_span[g]
-            col = _gene_color(float(lfc_map.get(g, 0.0)), vmax, up_color, down_color)
-            ax.add_patch(_ribbon(sub[j], sub[j + 1], gb0, gb1, col))
+            r, gr, b, al = _gene_color(
+                float(lfc_map.get(g, 0.0)), vmax, up_color, down_color
+            )
+            ribbon_col = (r, gr, b, al * 0.55)  # translucent so overlaps read
+            ax.add_patch(_ribbon(sub[j], sub[j + 1], gb0, gb1, ribbon_col))
 
     # legend for direction
     from matplotlib.patches import Patch
@@ -271,10 +250,10 @@ def pathway_chord(
             Patch(facecolor=down_color, label="down-regulated"),
         ],
         loc="lower center",
-        bbox_to_anchor=(0.5, -0.02),
+        bbox_to_anchor=(0.5, -0.06),
         ncol=2,
         frameon=False,
         fontsize=8,
     )
-    ax.set_title(title or f"Pathways ↔ genes  ({group})", fontsize=11)
+    ax.set_title(title or f"Pathways ↔ genes  ({group})", fontsize=12, y=1.04)
     return fig

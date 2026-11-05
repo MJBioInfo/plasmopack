@@ -1,0 +1,13 @@
+{
+  "_summary": {
+    "gmt_file": "tgondii_KEGG.gmt",
+    "n_genes_total": 623,
+    "n_sets": 65
+  },
+  "collection": "KEGG",
+  "max_set": 500,
+  "min_set": 5,
+  "organism": "tgondii",
+  "source": "KEGG",
+  "version": "KEGG-2026-11-05"
+}

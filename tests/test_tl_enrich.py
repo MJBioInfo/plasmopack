@@ -64,7 +64,8 @@ def test_provenance_records_gmt_version() -> None:
     pp.tl.enrich(adata, _sets(), genes=["g0", "g1", "g2"], min_set=2, key_added="q")
     h = get_history(adata)[-1]
     assert h["function"] == "tl.enrich"
-    assert h["sources"]["gmt_version"] == "TEST-1"
+    # custom GeneSets -> collection label "custom" -> source key "custom_version"
+    assert h["sources"]["custom_version"] == "TEST-1"
 
 
 def test_from_deg_path() -> None:

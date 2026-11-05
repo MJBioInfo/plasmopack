@@ -1,0 +1,13 @@
+{
+  "_summary": {
+    "gmt_file": "pberghei_KEGG.gmt",
+    "n_genes_total": 941,
+    "n_sets": 82
+  },
+  "collection": "KEGG",
+  "max_set": 500,
+  "min_set": 5,
+  "organism": "pberghei",
+  "source": "KEGG",
+  "version": "KEGG-2026-11-05"
+}
