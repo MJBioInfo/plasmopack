@@ -139,6 +139,27 @@ Every snapshot is version-stamped; `enrich` records which version was used.
 
 ## 4. Plotting — `pp.pl`
 
+### Gene names in plots and tables
+
+By default genes are labelled by their ID (`PBANKA_…`). To show **gene symbols
+where available, falling back to the ID otherwise**:
+
+```python
+pp.pp.add_gene_symbols(adata)                     # auto-detects a symbol column
+pp.pp.add_gene_symbols(adata, from_col="Gene_symbol")   # or name the column
+pp.pp.add_gene_symbols(adata, fetch=True)         # or look up from Ensembl (slower)
+# -> adata.var["symbol"]; plots then use it automatically
+```
+
+!!! note "Most *Plasmodium* genes have no short symbol"
+    Typically only ~10% of parasite genes have a gene symbol (e.g. `MSP2`,
+    `HSP90`); the rest keep their ID. For more descriptive labels you can point
+    at a **product-name** column instead, e.g.
+    `pp.pp.add_gene_symbols(adata, from_col="Gene_Function")`.
+
+To put symbols in a result **table**, map the ID column through
+`adata.var["symbol"]`.
+
 ### Circos pathway ↔ gene chord
 
 ```python
@@ -147,6 +168,7 @@ fig = pp.pl.pathway_chord(
     groupby="time", group="24h",     # where gene fold-changes come from
     n_pathways=3, n_genes=20,         # how many to show (configurable)
     gene_rank="combined",            # which genes to keep
+    gene_label="symbol",             # label by symbol (else ID); None = ID
 )
 fig.savefig("chord.png", dpi=150, bbox_inches="tight")
 ```

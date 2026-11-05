@@ -73,3 +73,14 @@ def test_chord_missing_deg_errors() -> None:
     adata = _prepared()
     with pytest.raises(KeyError, match="No DEG result"):
         pp.pl.pathway_chord(adata, "A", groupby="group", group="A", deg_method="t-test")
+
+
+def test_chord_uses_symbols() -> None:
+    adata = _prepared()
+    # label half the genes; the rest fall back to their IDs
+    adata.var["symbol"] = [f"SYM{i}" if i % 2 == 0 else "" for i in range(adata.n_vars)]
+    pp.pp.add_gene_symbols(adata)  # fills empties with IDs
+    fig = pp.pl.pathway_chord(adata, "A", groupby="group", group="A", n_genes=6)
+    texts = {t.get_text() for t in fig.axes[0].texts}
+    # at least one readable symbol label present
+    assert any(t.startswith("SYM") for t in texts)

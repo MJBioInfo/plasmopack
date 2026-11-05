@@ -68,6 +68,31 @@ def _gene_color(lfc: float, vmax: float, up_color: str, down_color: str) -> _RGB
     return to_rgba(base, alpha)
 
 
+def _label_map(adata: AnnData, gene_label: str | None) -> dict[str, str]:
+    """gene id -> display label (symbol where available, else the id).
+
+    ``gene_label`` names a ``var`` column; when ``None``, ``"symbol"`` is used
+    if present (e.g. from ``pp.pp.add_gene_symbols``), otherwise the gene id.
+    """
+    import numpy as np
+
+    col = gene_label or ("symbol" if "symbol" in adata.var.columns else None)
+    ids = [str(v) for v in adata.var_names]
+    if col is None:
+        return {gid: gid for gid in ids}
+    if col not in adata.var.columns:
+        raise KeyError(f"gene_label={col!r} not found in adata.var.")
+    out: dict[str, str] = {}
+    for gid, val in zip(ids, adata.var[col], strict=True):
+        s = (
+            ""
+            if val is None or (isinstance(val, float) and np.isnan(val))
+            else str(val).strip()
+        )
+        out[gid] = s if s and s.lower() not in {"nan", "none", "na", "-"} else gid
+    return out
+
+
 def pathway_chord(
     adata: AnnData,
     enrichment_key: str,
@@ -78,6 +103,7 @@ def pathway_chord(
     n_pathways: int = 3,
     n_genes: int = 20,
     gene_rank: str = "logfc",
+    gene_label: str | None = None,
     up_color: str = "#d62728",
     down_color: str = "#1f77b4",
     figsize: tuple[float, float] = (8.0, 8.0),
@@ -187,6 +213,7 @@ def pathway_chord(
     ax.set_ylim(-1.55, 1.55)
 
     vmax = max((abs(float(lfc_map.get(g, 0.0))) for g in genes), default=1.0)
+    labels = _label_map(adata, gene_label)  # gene id -> symbol-or-id
 
     def _radial(mid: float) -> tuple[float, str]:
         """Rotation + horizontal alignment so a label reads outward, upright."""
@@ -200,30 +227,65 @@ def pathway_chord(
         a0, a1 = gene_span[g]
         col = _gene_color(float(lfc_map.get(g, 0.0)), vmax, up_color, down_color)
         ax.add_patch(
-            Wedge((0, 0), _R_OUTER, a0, a1, width=_R_OUTER - _R_INNER,
-                  facecolor=col, edgecolor="white", linewidth=0.5, zorder=3)
+            Wedge(
+                (0, 0),
+                _R_OUTER,
+                a0,
+                a1,
+                width=_R_OUTER - _R_INNER,
+                facecolor=col,
+                edgecolor="white",
+                linewidth=0.5,
+                zorder=3,
+            )
         )
         mid = gene_mid[g]
         rot, ha = _radial(mid)
         lx, ly = _polar(mid, _R_OUTER + 0.03)
-        label = g if len(g) <= 16 else g[:15] + "…"
-        ax.text(lx, ly, label, rotation=rot, rotation_mode="anchor",
-                ha=ha, va="center", fontsize=6.5)
+        text = labels.get(g, g)
+        label = text if len(text) <= 16 else text[:15] + "…"
+        ax.text(
+            lx,
+            ly,
+            label,
+            rotation=rot,
+            rotation_mode="anchor",
+            ha=ha,
+            va="center",
+            fontsize=6.5,
+        )
 
     # draw pathway wedges + labels
     for pi, (name, _) in enumerate(pathways):
         a0, a1 = pathway_span[pi]
         ax.add_patch(
-            Wedge((0, 0), _R_OUTER, a0, a1, width=_R_OUTER - _R_INNER,
-                  facecolor=_PATHWAY_COLORS[pi % len(_PATHWAY_COLORS)],
-                  edgecolor="white", linewidth=0.5, zorder=3)
+            Wedge(
+                (0, 0),
+                _R_OUTER,
+                a0,
+                a1,
+                width=_R_OUTER - _R_INNER,
+                facecolor=_PATHWAY_COLORS[pi % len(_PATHWAY_COLORS)],
+                edgecolor="white",
+                linewidth=0.5,
+                zorder=3,
+            )
         )
         mid = 0.5 * (a0 + a1)
         rot, ha = _radial(mid)
         lx, ly = _polar(mid, _R_OUTER + 0.05)
         disp = name if len(name) <= 28 else name[:27] + "…"
-        ax.text(lx, ly, disp, rotation=rot, rotation_mode="anchor",
-                ha=ha, va="center", fontsize=8.5, fontweight="bold")
+        ax.text(
+            lx,
+            ly,
+            disp,
+            rotation=rot,
+            rotation_mode="anchor",
+            ha=ha,
+            va="center",
+            fontsize=8.5,
+            fontweight="bold",
+        )
 
     # draw ribbons: subdivide each pathway arc among its links and connect
     for pi in range(len(pathways)):
